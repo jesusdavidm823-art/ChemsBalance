@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Balanceador de Ecuaciones Químicas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(to right, #e0f7fa, #f1f8e9);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .card {
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    #resultado {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-top: 15px;
+    }
+    #historial {
+      margin-top: 25px;
+    }
+    .historial-item {
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container d-flex justify-content-center align-items-center vh-100">
+    <div class="card p-4 w-100" style="max-width: 650px;">
+      <div class="card-body">
+        <h1 class="text-center text-primary mb-3">🔬 Balanceador Químico</h1>
+        <p class="text-center text-muted">Escribe la ecuación química (ejemplo: <b>H2 + O2 -> H2O</b>)</p>
+
+        <div class="mb-3">
+          <input type="text" id="equationInput" class="form-control form-control-lg" placeholder="Ej: C3H8 + O2 -> CO2 + H2O">
+        </div>
+
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary btn-lg" onclick="balancear()">⚡ Balancear</button>
+        </div>
+
+        <div id="resultado" class="text-center text-success"></div>
+
+        <div id="historial">
+          <h4 class="mt-4 text-secondary">📜 Historial</h4>
+          <div id="historialLista"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function balancear() {
+      const equation = document.getElementById("equationInput").value;
+      const resultadoDiv = document.getElementById("resultado");
+
+      if (!equation) {
+        resultadoDiv.innerHTML = "❌ Escribe una ecuación primero.";
+        resultadoDiv.classList.add("text-danger");
+        return;
+      }
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/balance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ equation })
+        });
+
+        if (!response.ok) {
+          throw new Error("Error en el servidor");
+        }
+
+        const data = await response.json();
+        resultadoDiv.innerHTML = "✅ " + data.balanced;
+        resultadoDiv.classList.remove("text-danger");
+        resultadoDiv.classList.add("text-success");
+
+        // Actualizar historial desde backend
+        cargarHistorial();
+
+      } catch (error) {
+        resultadoDiv.innerHTML = "⚠️ Error: " + error.message;
+        resultadoDiv.classList.remove("text-success");
+        resultadoDiv.classList.add("text-danger");
+      }
+    }
+
+    async function cargarHistorial() {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/historial");
+        const data = await response.json();
+        const historialDiv = document.getElementById("historialLista");
+        historialDiv.innerHTML = "";
+        data.historial.forEach((eq, index) => {
+          historialDiv.innerHTML += `
+            <div class="historial-item">
+              <b>#${index + 1}:</b> ${eq}
+            </div>
+          `;
+        });
+      } catch (error) {
+        console.error("Error cargando historial:", error);
+      }
+    }
+
+    // Cargar historial al abrir la página
+    cargarHistorial();
+  </script>
+</body>
+</html>
